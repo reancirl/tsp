@@ -58,6 +58,11 @@
                                 </a>
 
                                 <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                                    @can('view_users')
+                                        <a class="dropdown-item" href="{{ route('accounts.index') }}">
+                                            {{ __('Accounts') }}
+                                        </a>
+                                    @endcan
                                     <a class="dropdown-item" href="{{ route('logout') }}"
                                        onclick="event.preventDefault();
                                                      document.getElementById('logout-form').submit();">
