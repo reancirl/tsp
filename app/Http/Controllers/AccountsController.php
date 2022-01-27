@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\User;
 use Spatie\Permission\Models\{Role,Permission};
+use Maatwebsite\Excel\Facades\Excel; 
+use Illuminate\Http\Request;
+use App\Exports\UserExport;
+use App\Models\User;
 
 class AccountsController extends Controller
 {
@@ -13,7 +15,7 @@ class AccountsController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
         if(!auth()->user()->can('view_users')) {
             abort(404);
@@ -21,6 +23,11 @@ class AccountsController extends Controller
 
         $roles = Role::get();
         $data = User::with('roles')->get();
+
+        if($request->excel) {
+            return Excel::download(new UserExport($data), 'Users Export.xlsx');
+        }
+
         return view('accounts.index',compact('data','roles'));
     }
 
@@ -103,5 +110,40 @@ class AccountsController extends Controller
     public function destroy($id)
     {
         //
+    }
+
+    public function import_get()
+    {
+        $columns = ['name','email'];
+        return view('accounts.import',compact('columns'));
+    }
+
+    public function import_post(Request $request)
+    {
+        $success_count = 0;
+        $fail_count = 0;
+        foreach($request->import as $item)
+        {
+            if($item['name'] != null) {
+                $exist = User::where('email',$item['email'])->first();
+                if(!$exist) {
+                    $user = new User;
+                    $user->name = $item['name'];
+                    $user->email = $item['email'];
+                    $user->password = \Hash::make('password');
+                    $user->save();  
+                    $user->assignRole(2);
+
+                    $success_count++;
+                } else {
+                    $fail_count++;
+                }
+            }
+        }
+
+        $message = $success_count.' records successfully imported! '.$fail_count.' records has been ignored!';
+
+        // return redirect()->back()->with('status'.$success_count.'Records successfully imported!,'.$fail_count.'records has been ignored!');
+        return redirect()->back()->with('status',$message);
     }
 }
